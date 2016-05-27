@@ -4,6 +4,7 @@ mod error;
 
 use error::Error;
 
+use std::fmt;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use hyper::client::{Client as HyperClient};
@@ -138,9 +139,45 @@ impl Event {
     }
 }
 
+impl fmt::Display for Event {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref id) = self.id {
+            try!(write!(f, "id: {}\n", id));
+        }
+        if let Some(ref event_type) = self.event_type {
+            try!(write!(f, "event: {}\n", event_type));
+        }
+        for line in self.data.lines() {
+            try!(write!(f, "data: {}\n", line));
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
+    fn basic_event_display() {
+        assert_eq!(
+            "data: hello world\n",
+            Event { id: None, event_type: None, data: "hello world".to_string() }.to_string());
+        assert_eq!(
+            "id: foo\ndata: hello world\n",
+            Event { id: Some("foo".to_string()), event_type: None, data: "hello world".to_string() }.to_string());
+        assert_eq!(
+            "event: bar\ndata: hello world\n",
+            Event { id: None, event_type: Some("bar".to_string()), data: "hello world".to_string() }.to_string());
+    }
+
+    #[test]
+    fn multiline_event_display() {
+        assert_eq!(
+            "data: hello\ndata: world\n",
+            Event { id: None, event_type: None, data: "hello\nworld".to_string() }.to_string());
+        assert_eq!(
+            "data: hello\ndata: \ndata: world\n",
+            Event { id: None, event_type: None, data: "hello\n\nworld".to_string() }.to_string());
     }
 }
