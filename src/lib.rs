@@ -1,5 +1,9 @@
 #[macro_use] extern crate hyper;
 
+mod error;
+
+use error::Error;
+
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use hyper::client::{Client as HyperClient};
@@ -82,23 +86,37 @@ impl Client {
     }
 }
 
+// Helper macro for Option<Result<...>>
+macro_rules! try_option {
+    ($e:expr) => (match $e {
+        Ok(val) => val,
+        Err(err) => return Some(Err(::std::convert::From::from(err))),
+    });
+}
+
 // Iterate over the client to get events.
 impl Iterator for Client {
-    // TODO: Result<Event>
-    type Item = Event;
+    type Item = Result<Event, Error>;
 
-    fn next(&mut self) -> Option<Event> {
+    fn next(&mut self) -> Option<Result<Event, Error>> {
         if self.reader.is_none() {
-            let r = BufReader::new(self.next_request().unwrap());
+            let req = try_option!(self.next_request());
+            // We can only work with successful requests.
+            // TODO: Should honor the `retry` timeout for the next iteration.
+            if !req.status.is_success() {
+                return Some(Err(Error::Http(req.status)));
+            }
+            let r = BufReader::new(req);
             self.reader = Some(r);
         }
         let mut event = Event::new();
         let mut line = String::new();
 
         // We can't have a mutable reference to the reader because of the &mut self call below.
-        while self.reader.as_mut().unwrap().read_line(&mut line).unwrap() > 0 {
+        // The first unwrap() is safe as we're checking that above.
+        while try_option!(self.reader.as_mut().unwrap().read_line(&mut line)) > 0 {
             match self.parse_event_line(&line, &mut event) {
-                ParseResult::Dispatch => return Some(event),
+                ParseResult::Dispatch => return Some(Ok(event)),
                 ParseResult::Next => (),
             }
             line.clear();
