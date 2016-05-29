@@ -3,15 +3,16 @@ extern crate hyper;
 use std::{error, fmt, io};
 use hyper::header::ContentType;
 
+/// Errors that can occur while reading events.
 #[derive(Debug)]
 pub enum Error {
-    // Some error from Hyper.
+    /// Some error from Hyper.
     Hyper(hyper::error::Error),
-    // HTTP request not successful.
+    /// HTTP request not successful.
     Http(hyper::status::StatusCode),
-    // IO error while reading a response body.
+    /// IO error while reading a response body.
     Io(io::Error),
-    // Invalid or no Content-Type returned by the server.
+    /// Invalid or no Content-Type returned by the server.
     InvalidContentType(Option<ContentType>),
 }
 

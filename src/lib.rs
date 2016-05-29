@@ -1,8 +1,27 @@
+//! # EventSource
+//!
+//! EventSource is a Rust library for reading from Server-Sent Events endpoints. It transparently
+//! sends HTTP requests and only exposes a stream of events to the user. It handles automatic
+//! reconnection and parsing of the `text/event-stream` data format.
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # extern crate hyper;
+//! # extern crate eventsource;
+//! let url = hyper::Url::parse("http://example.com/").unwrap();
+//! let client = eventsource::Client::new(url);
+//! for event in client {
+//!     println!("{}", event.unwrap());
+//! }
+//! ```
+//!
+
 #[macro_use] extern crate hyper;
 
 mod error;
 
-use error::Error;
+pub use error::Error;
 
 use std::fmt;
 use std::io::{BufRead, BufReader};
@@ -17,19 +36,29 @@ const DEFAULT_RETRY: u64 = 5000;
 
 header! { (LastEventID, "Last-Event-ID") => [String] }
 
+/// A client for a Server-Sent Events endpoint.
+///
+/// Read events by iterating over the client.
 pub struct Client {
     hc: HyperClient,
     reader: Option<BufReader<Response>>,
     url: Url,
     last_event_id: Option<String>,
-    retry: u64, // reconnection time in milliseconds
     last_try: Option<Instant>,
+
+    /// Reconnection time in milliseconds. Note that the reconnection time can be changed by the
+    /// event stream, so changing this may not make a difference.
+    pub retry: Duration,
 }
 
+/// A single Server-Sent Event.
 #[derive(Debug)]
 pub struct Event {
+    /// Corresponds to the `id` field.
     pub id: Option<String>,
+    /// Corresponds to the `event` field.
     pub event_type: Option<String>,
+    /// All `data` fields concatenated by newlines.
     pub data: String,
 }
 
@@ -39,13 +68,16 @@ enum ParseResult {
 }
 
 impl Client {
+    /// Constructs a new EventSource client for the given URL.
+    ///
+    /// This does not start an HTTP request.
     pub fn new(url: Url) -> Client {
         Client {
             hc: HyperClient::new(),
             reader: None,
             url: url,
             last_event_id: None,
-            retry: DEFAULT_RETRY,
+            retry: Duration::from_millis(DEFAULT_RETRY),
             last_try: None,
         }
     }
@@ -79,7 +111,7 @@ impl Client {
                 "id" => { event.id = Some(value.to_string()); self.last_event_id = Some(value.to_string()); }
                 "retry" => {
                     if let Ok(retry) = value.parse::<u64>() {
-                        self.retry = retry;
+                        self.retry = Duration::from_millis(retry);
                     }
                 },
                 _ => () // ignored
@@ -98,7 +130,9 @@ macro_rules! try_option {
     });
 }
 
-// Iterate over the client to get events.
+/// Iterate over the client to get events.
+///
+/// HTTP requests are made transparently while iterating.
 impl Iterator for Client {
     type Item = Result<Event, Error>;
 
@@ -107,9 +141,8 @@ impl Iterator for Client {
             // We may have to wait for the next request.
             if let Some(last_try) = self.last_try {
                 let elapsed = last_try.elapsed();
-                let retry = Duration::from_millis(self.retry);
-                if elapsed < retry {
-                    std::thread::sleep(retry - elapsed);
+                if elapsed < self.retry {
+                    std::thread::sleep(self.retry - elapsed);
                 }
             }
             // Set here in case the request fails.
