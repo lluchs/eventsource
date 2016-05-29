@@ -6,7 +6,7 @@ use error::Error;
 
 use std::fmt;
 use std::io::{BufRead, BufReader};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use hyper::client::{Client as HyperClient};
 use hyper::client::response::Response;
 use hyper::header::{self, Headers};
@@ -23,6 +23,7 @@ pub struct Client {
     url: Url,
     last_event_id: Option<String>,
     retry: u64, // reconnection time in milliseconds
+    last_try: Option<Instant>,
 }
 
 #[derive(Debug)]
@@ -45,6 +46,7 @@ impl Client {
             url: url,
             last_event_id: None,
             retry: DEFAULT_RETRY,
+            last_try: None,
         }
     }
 
@@ -102,9 +104,19 @@ impl Iterator for Client {
 
     fn next(&mut self) -> Option<Result<Event, Error>> {
         if self.reader.is_none() {
+            // We may have to wait for the next request.
+            if let Some(last_try) = self.last_try {
+                let elapsed = last_try.elapsed();
+                let retry = Duration::from_millis(self.retry);
+                if elapsed < retry {
+                    std::thread::sleep(retry - elapsed);
+                }
+            }
+            // Set here in case the request fails.
+            self.last_try = Some(Instant::now());
+
             let req = try_option!(self.next_request());
             // We can only work with successful requests.
-            // TODO: Should honor the `retry` timeout for the next iteration.
             if !req.status.is_success() {
                 return Some(Err(Error::Http(req.status)));
             }
@@ -129,8 +141,8 @@ impl Iterator for Client {
             line.clear();
         }
         // EOF, retry after timeout
+        self.last_try = Some(Instant::now());
         self.reader = None;
-        std::thread::sleep(Duration::from_millis(self.retry));
         self.next()
     }
 }
