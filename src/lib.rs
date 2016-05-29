@@ -9,7 +9,8 @@ use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use hyper::client::{Client as HyperClient};
 use hyper::client::response::Response;
-use hyper::header::Headers;
+use hyper::header::{self, Headers};
+use hyper::mime::{Mime, TopLevel, SubLevel};
 use hyper::Url;
 
 const DEFAULT_RETRY: u64 = 5000;
@@ -106,6 +107,11 @@ impl Iterator for Client {
             // TODO: Should honor the `retry` timeout for the next iteration.
             if !req.status.is_success() {
                 return Some(Err(Error::Http(req.status)));
+            }
+            // Verify Content-Type = text/event-stream.
+            match req.headers.get() {
+                Some(&header::ContentType(Mime(TopLevel::Text, SubLevel::EventStream, _))) => (), // ok
+                ct => return Some(Err(Error::InvalidContentType(ct.map(|x| x.clone())))),
             }
             let r = BufReader::new(req);
             self.reader = Some(r);

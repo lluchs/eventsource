@@ -1,6 +1,7 @@
 extern crate hyper;
 
 use std::{error, fmt, io};
+use hyper::header::ContentType;
 
 #[derive(Debug)]
 pub enum Error {
@@ -10,6 +11,8 @@ pub enum Error {
     Http(hyper::status::StatusCode),
     // IO error while reading a response body.
     Io(io::Error),
+    // Invalid or no Content-Type returned by the server.
+    InvalidContentType(Option<ContentType>),
 }
 
 impl fmt::Display for Error {
@@ -18,6 +21,8 @@ impl fmt::Display for Error {
             Error::Hyper(ref err) => write!(f, "Hyper error: {}", err),
             Error::Http(ref status) => write!(f, "HTTP request failed: {}", status),
             Error::Io(ref err) => write!(f, "I/O error: {}", err),
+            Error::InvalidContentType(Some(ref ct)) => write!(f, "Invalid content type: {}", ct),
+            Error::InvalidContentType(None) => write!(f, "No content type"),
         }
     }
 }
@@ -28,6 +33,7 @@ impl error::Error for Error {
             Error::Hyper(ref err) => err.description(),
             Error::Http(ref status) => status.canonical_reason().unwrap_or("Unknown error"),
             Error::Io(ref err) => err.description(),
+            Error::InvalidContentType(_) => "Content-Type returned by server must be text/event-stream",
         }
     }
 
@@ -36,6 +42,7 @@ impl error::Error for Error {
             Error::Hyper(ref err) => Some(err),
             Error::Http(_) => None,
             Error::Io(ref err) => Some(err),
+            Error::InvalidContentType(_) => None,
         }
     }
 }
