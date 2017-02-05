@@ -1,6 +1,6 @@
 [package]
 name = "eventsource"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Lukas Werling <lukas.werling@gmail.com>"]
 
 description = "Library for accessing EventSource/Server-Sent Events endpoints"
@@ -8,5 +8,12 @@ repository = "https://github.com/lluchs/eventsource"
 license = "MIT"
 keywords = ["http"]
 
+[features]
+default = ["with-curl"]
+
+# Enable the curl-based client.
+with-curl = ["curl"]
+
 [dependencies]
-hyper = "0.9"
+error-chain = "0.8.1"
+curl = { version = "0.4.4", optional = true }
