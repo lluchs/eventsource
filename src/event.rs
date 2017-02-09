@@ -48,7 +48,7 @@ pub enum ParseResult {
 /// // ...
 /// ```
 pub fn parse_event_line(line: &str, event: &mut Event) -> ParseResult {
-    let line = if line.ends_with('\n') { &line[0..line.len()-1] } else { line };
+    let line = line.trim_right_matches(|c| c == '\r' || c == '\n');
     if line == "" {
         ParseResult::Dispatch
     } else {
