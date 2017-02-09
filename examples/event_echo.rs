@@ -1,11 +1,13 @@
 extern crate eventsource;
+extern crate reqwest;
 
-use eventsource::curl::Client;
+use eventsource::reqwest::Client;
+use reqwest::Url;
 
 fn main() {
-    let url = "https://clonkspot.org/league/game_events.php";
-    //let url = "http://league.openclonk.org/poll_game_events.php";
-    let client = Client::new(url);
+    //let url = "https://clonkspot.org/league/game_events.php";
+    let url = "http://league.openclonk.org/poll_game_events.php";
+    let client = Client::new(Url::parse(url).unwrap()).unwrap();
     for event in client {
         println!("{}", event.unwrap());
     }

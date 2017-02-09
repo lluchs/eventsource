@@ -7,10 +7,16 @@
 //! # Examples
 //!
 //! ```no_run
-//! use eventsource::curl::Client;
-//! let client = Client::new("http://example.com");
-//! for event in client {
-//!     println!("{}", event.unwrap());
+//! extern crate eventsource;
+//! extern crate reqwest;
+//! use eventsource::reqwest::Client;
+//! use reqwest::Url;
+//!
+//! fn main() {
+//!     let client = Client::new(Url::parse("http://example.com").unwrap()).unwrap();
+//!     for event in client {
+//!         println!("{}", event.unwrap());
+//!     }
 //! }
 //! ```
 //!
@@ -24,3 +30,6 @@ pub mod event;
 // HTTP interface
 #[cfg(feature = "with-curl")]
 pub mod curl;
+
+#[cfg(feature = "with-reqwest")]
+pub mod reqwest;
