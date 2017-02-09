@@ -28,8 +28,5 @@ extern crate error_chain;
 pub mod event;
 
 // HTTP interface
-#[cfg(feature = "with-curl")]
-pub mod curl;
-
 #[cfg(feature = "with-reqwest")]
 pub mod reqwest;
