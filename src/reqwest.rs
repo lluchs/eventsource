@@ -1,4 +1,4 @@
-//! # CURL-based EventSource client
+//! # Reqwest-based EventSource client
 
 extern crate reqwest as reqw;
 extern crate mime;
