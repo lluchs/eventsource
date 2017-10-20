@@ -1,7 +1,6 @@
 //! # Reqwest-based EventSource client
 
 extern crate reqwest as reqw;
-extern crate mime;
 
 mod errors {
     error_chain! {
@@ -16,7 +15,7 @@ mod errors {
                 display("HTTP status code: {}", status)
             }
 
-            InvalidContentType(mime_type: super::mime::Mime) {
+            InvalidContentType(mime_type: super::reqw::mime::Mime) {
                 description("unexpected Content-Type header")
                 display("unexpected Content-Type: {}", mime_type)
             }
@@ -29,7 +28,7 @@ use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
 use super::event::{Event, ParseResult, parse_event_line};
 use self::reqw::header::{Headers, Accept, ContentType, qitem};
-use self::mime::{Mime, TopLevel, SubLevel};
+use self::reqw::mime;
 
 const DEFAULT_RETRY: u64 = 5000;
 
@@ -52,22 +51,22 @@ impl Client {
     /// Constructs a new EventSource client for the given URL.
     ///
     /// This does not start an HTTP request.
-    pub fn new(url: reqw::Url) -> Result<Client> {
-        Ok(Client {
-            client: reqw::Client::new()?,
+    pub fn new(url: reqw::Url) -> Client {
+        Client {
+            client: reqw::Client::new(),
             response: None,
             url: url,
             last_event_id: None,
             last_try: None,
             retry: Duration::from_millis(DEFAULT_RETRY),
-        })
+        }
     }
 
     fn next_request(&mut self) -> Result<()> {
         let mut headers = Headers::new();
         headers.set(
             Accept(vec![
-                   qitem(Mime(TopLevel::Text, SubLevel::EventStream, vec![])),
+                   qitem(mime::TEXT_EVENT_STREAM),
             ])
         );
         if let Some(ref id) = self.last_event_id {
@@ -85,9 +84,8 @@ impl Client {
                 return Err(ErrorKind::Http(status.clone()).into());
             }
             if let Some(&ContentType(ref content_type)) = res.headers().get::<ContentType>() {
-                match *content_type {
-                    Mime(TopLevel::Text, SubLevel::EventStream, _) => (), // ok
-                    _ => return Err(ErrorKind::InvalidContentType(content_type.clone()).into()),
+                if *content_type == mime::TEXT_EVENT_STREAM {
+                    return Err(ErrorKind::InvalidContentType(content_type.clone()).into());
                 }
             }
         }

@@ -13,8 +13,9 @@ fn server() -> Server {
     s.receive("\
 GET / HTTP/1.1\r\n\
 Host: 127.0.0.1:$PORT\r\n\
-User-Agent: reqwest/0.4.0\r\n\
+User-Agent: reqwest/0.8.0\r\n\
 Accept: text/event-stream\r\n\
+Accept-Encoding: gzip\r\n\
 \r\n");
     return s;
 }
@@ -34,7 +35,7 @@ data: baz\n\
 \n");
 
     println!("url: {}", s.url("/"));
-    let mut client = Client::new(Url::parse(&s.url("/")).unwrap()).unwrap();
+    let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
 
     let event = client.next().unwrap().unwrap();
     assert_eq!(event.id, Some("42".into()));
@@ -57,7 +58,7 @@ data: bar\r\n\
 \r\n");
 
     println!("url: {}", s.url("/"));
-    let mut client = Client::new(Url::parse(&s.url("/")).unwrap()).unwrap();
+    let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
     let event = client.next().unwrap().unwrap();
     assert_eq!(event.data, "bar\n");
     assert_eq!(client.retry, Duration::from_millis(42));

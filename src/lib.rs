@@ -13,7 +13,7 @@
 //! use reqwest::Url;
 //!
 //! fn main() {
-//!     let client = Client::new(Url::parse("http://example.com").unwrap()).unwrap();
+//!     let client = Client::new(Url::parse("http://example.com").unwrap());
 //!     for event in client {
 //!         println!("{}", event.unwrap());
 //!     }

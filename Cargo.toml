@@ -12,9 +12,8 @@ keywords = ["http"]
 default = ["with-reqwest"]
 
 # Enable the reqwest-based client.
-with-reqwest = ["reqwest", "mime"]
+with-reqwest = ["reqwest"]
 
 [dependencies]
-error-chain = "0.8.1"
-reqwest = { version = "0.4.0", optional = true }
-mime = { version = "0.2.2", optional = true }
+error-chain = "0.11.0"
+reqwest = { version = "0.8.0", optional = true }
