@@ -126,31 +126,49 @@ impl Iterator for Client {
             try_option!(self.next_request());
         }
 
-        {
+        let result = {
             let mut event = Event::new();
             let mut line = String::new();
             let mut reader = self.response.as_mut().unwrap();
-            while try_option!(reader.read_line(&mut line)) > 0 {
-                match parse_event_line(&line, &mut event) {
-                    ParseResult::Next => (), // okay, just continue
-                    ParseResult::Dispatch => {
-                        if let Some(ref id) = event.id {
-                            self.last_event_id = Some(id.clone());
+
+            loop {
+                match reader.read_line(&mut line) {
+                    // Got new bytes from stream
+                    Ok(_n) if _n > 0 => {
+                        match parse_event_line(&line, &mut event) {
+                            ParseResult::Next => (), // okay, just continue
+                            ParseResult::Dispatch => {
+                                if let Some(ref id) = event.id {
+                                    self.last_event_id = Some(id.clone());
+                                }
+                                return Some(Ok(event));
+                            },
+                            ParseResult::SetRetry(ref retry) => {
+                                self.retry = *retry;
+                            }
                         }
-                        return Some(Ok(event));
-                    },
-                    ParseResult::SetRetry(ref retry) => {
-                        self.retry = *retry;
+                        line.clear();
+                    }
+                    // Nothing read from stream
+                    Ok(_) => {
+                        break None
+                    }
+                    Err(err) => {
+                        break Some(Err(::std::convert::From::from(err)))
                     }
                 }
-                line.clear();
             }
-        }
+        };
 
-        // EOF, retry after timeout
-        self.last_try = Some(Instant::now());
-        self.response = None;
-        self.next()
+        match result {
+            None | Some(Err(_)) => {
+                // EOF or a stream error, retry after timeout
+                self.last_try = Some(Instant::now());
+                self.response = None;
+                self.next()
+            }
+            _ => result
+        }
     }
 }
 
