@@ -127,7 +127,7 @@ impl Iterator for Client {
         let result = {
             let mut event = Event::new();
             let mut line = String::new();
-            let mut reader = self.response.as_mut().unwrap();
+            let reader = self.response.as_mut().unwrap();
 
             loop {
                 match reader.read_line(&mut line) {
