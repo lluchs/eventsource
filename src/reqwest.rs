@@ -19,10 +19,15 @@ mod errors {
                 description("unexpected Content-Type header")
                 display("unexpected Content-Type: {}", mime_type)
             }
+
+            NoContentType {
+                description("no Content-Type header in response")
+                display("Content-Type missing")
+            }
         }
     }
 }
-use self::errors::*;
+pub use self::errors::*;
 
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
@@ -84,9 +89,12 @@ impl Client {
                 return Err(ErrorKind::Http(status.clone()).into());
             }
             if let Some(&ContentType(ref content_type)) = res.headers().get::<ContentType>() {
-                if *content_type == mime::TEXT_EVENT_STREAM {
+                // Compare type and subtype only, MIME parameters are ignored.
+                if (content_type.type_(), content_type.subtype()) != (mime::TEXT, mime::EVENT_STREAM) {
                     return Err(ErrorKind::InvalidContentType(content_type.clone()).into());
                 }
+            } else {
+                return Err(ErrorKind::NoContentType.into());
             }
         }
 

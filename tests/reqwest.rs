@@ -1,7 +1,7 @@
 extern crate eventsource;
 extern crate reqwest;
 
-use eventsource::reqwest::Client;
+use eventsource::reqwest::{Client, Error, ErrorKind};
 use reqwest::Url;
 use std::time::Duration;
 
@@ -24,6 +24,7 @@ Accept-Encoding: gzip\r\n\
 fn simple_events() {
     let s = server();
     s.send("HTTP/1.1 200 OK\r\n\
+Content-Type: text/event-stream\r\n\
 \r\n\
 id: 42\r\n\
 event: foo\r\n\
@@ -52,6 +53,7 @@ data: baz\n\
 fn retry() {
     let s = server();
     s.send("HTTP/1.1 200 OK\r\n\
+Content-Type: text/event-stream\r\n\
 \r\n\
 retry: 42\r\n\
 data: bar\r\n\
@@ -62,4 +64,49 @@ data: bar\r\n\
     let event = client.next().unwrap().unwrap();
     assert_eq!(event.data, "bar\n");
     assert_eq!(client.retry, Duration::from_millis(42));
+}
+
+#[test]
+fn missing_content_type() {
+    let s = server();
+    s.send("HTTP/1.1 200 OK\r\n\
+\r\n\
+data: bar\r\n\
+\r\n");
+
+    let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
+    match client.next().unwrap() {
+        Err(Error(ErrorKind::NoContentType, _)) => assert!(true),
+        _ => assert!(false, "NoContentType error expected"),
+    }
+}
+
+#[test]
+fn invalid_content_type() {
+    let s = server();
+    s.send("HTTP/1.1 200 OK\r\n\
+Content-Type: text/plain\r\n\
+\r\n\
+data: bar\r\n\
+\r\n");
+
+    let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
+    match client.next().unwrap() {
+        Err(Error(ErrorKind::InvalidContentType(_), _)) => assert!(true),
+        _ => assert!(false, "InvalidContentType error expected"),
+    }
+}
+
+#[test]
+fn content_type_with_mime_parameter() {
+    let s = server();
+    s.send("HTTP/1.1 200 OK\r\n\
+Content-Type: text/event-stream;charset=utf8\r\n\
+\r\n\
+data: bar\r\n\
+\r\n");
+
+    let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
+    let event = client.next().unwrap().expect("MIME parameter should be ignored");
+    assert_eq!(event.data, "bar\n");
 }
