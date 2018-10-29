@@ -84,9 +84,10 @@ impl Client {
             }
 
             if let Some(content_type) = res.headers().get(CONTENT_TYPE) {
-                let mime = content_type.to_str().unwrap().to_string();
-                if mime == "text/event-stream" {
-                    return Err(ErrorKind::InvalidContentType(mime).into());
+                if content_type != "text/event-stream" {
+                    return Err(ErrorKind::InvalidContentType(
+                        content_type.to_str().unwrap().to_string(),
+                    ).into());
                 }
             } else {
                 return Err(ErrorKind::NoContentType.into());
