@@ -68,10 +68,7 @@ impl Client {
         let mut headers = HeaderMap::with_capacity(2);
         headers.insert(ACCEPT, HeaderValue::from_str("text/event-stream").unwrap());
         if let Some(ref id) = self.last_event_id {
-            headers.insert(
-                "Last-Event-ID",
-                HeaderValue::from_bytes(id.as_bytes()).unwrap(),
-            );
+            headers.insert("Last-Event-ID", HeaderValue::from_str(id).unwrap());
         }
 
         let res = self.client.get(self.url.clone()).headers(headers).send()?;
