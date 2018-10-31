@@ -1,5 +1,6 @@
 //! # Reqwest-based EventSource client
 
+extern crate mime;
 extern crate reqwest as reqw;
 
 mod errors {
@@ -14,9 +15,9 @@ mod errors {
                 description("HTTP request failed")
                 display("HTTP status code: {}", status)
             }
-            InvalidContentType(content_type: String) {
+            InvalidContentType(mime_type: mime::Mime) {
                 description("unexpected Content-Type header")
-                display("unexpected Content-Type: {}", content_type)
+                display("unexpected Content-Type: {}", mime_type)
             }
             NoContentType {
                 description("no Content-Type header in response")
@@ -80,11 +81,18 @@ impl Client {
                 return Err(ErrorKind::Http(status.clone()).into());
             }
 
-            if let Some(content_type) = res.headers().get(CONTENT_TYPE) {
-                if content_type != "text/event-stream" {
-                    return Err(ErrorKind::InvalidContentType(
-                        content_type.to_str().unwrap().to_string(),
-                    ).into());
+            if let Some(content_type_hv) = res.headers().get(CONTENT_TYPE) {
+                let content_type = content_type_hv
+                    .to_str()
+                    .unwrap()
+                    .to_string()
+                    .parse::<mime::Mime>()
+                    .unwrap();
+                // Compare type and subtype only, MIME parameters are ignored.
+                if (content_type.type_(), content_type.subtype())
+                    != (mime::TEXT, mime::EVENT_STREAM)
+                {
+                    return Err(ErrorKind::InvalidContentType(content_type.clone()).into());
                 }
             } else {
                 return Err(ErrorKind::NoContentType.into());
