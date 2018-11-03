@@ -1,5 +1,6 @@
 //! # Reqwest-based EventSource client
 
+extern crate mime;
 extern crate reqwest as reqw;
 
 mod errors {
@@ -14,12 +15,10 @@ mod errors {
                 description("HTTP request failed")
                 display("HTTP status code: {}", status)
             }
-
-            InvalidContentType(mime_type: super::reqw::mime::Mime) {
+            InvalidContentType(mime_type: mime::Mime) {
                 description("unexpected Content-Type header")
                 display("unexpected Content-Type: {}", mime_type)
             }
-
             NoContentType {
                 description("no Content-Type header in response")
                 display("Content-Type missing")
@@ -29,11 +28,10 @@ mod errors {
 }
 pub use self::errors::*;
 
+use self::reqw::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
+use super::event::{parse_event_line, Event, ParseResult};
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
-use super::event::{Event, ParseResult, parse_event_line};
-use self::reqw::header::{Headers, Accept, ContentType, qitem};
-use self::reqw::mime;
 
 const DEFAULT_RETRY: u64 = 5000;
 
@@ -68,19 +66,13 @@ impl Client {
     }
 
     fn next_request(&mut self) -> Result<()> {
-        let mut headers = Headers::new();
-        headers.set(
-            Accept(vec![
-                   qitem(mime::TEXT_EVENT_STREAM),
-            ])
-        );
+        let mut headers = HeaderMap::with_capacity(2);
+        headers.insert(ACCEPT, HeaderValue::from_str("text/event-stream").unwrap());
         if let Some(ref id) = self.last_event_id {
-            headers.set_raw("Last-Event-ID", vec![id.as_bytes().to_vec()]);
+            headers.insert("Last-Event-ID", HeaderValue::from_str(id).unwrap());
         }
 
-        let res = self.client.get(self.url.clone())
-            .headers(headers)
-            .send()?;
+        let res = self.client.get(self.url.clone()).headers(headers).send()?;
 
         // Check status code and Content-Type.
         {
@@ -88,9 +80,18 @@ impl Client {
             if !status.is_success() {
                 return Err(ErrorKind::Http(status.clone()).into());
             }
-            if let Some(&ContentType(ref content_type)) = res.headers().get::<ContentType>() {
+
+            if let Some(content_type_hv) = res.headers().get(CONTENT_TYPE) {
+                let content_type = content_type_hv
+                    .to_str()
+                    .unwrap()
+                    .to_string()
+                    .parse::<mime::Mime>()
+                    .unwrap();
                 // Compare type and subtype only, MIME parameters are ignored.
-                if (content_type.type_(), content_type.subtype()) != (mime::TEXT, mime::EVENT_STREAM) {
+                if (content_type.type_(), content_type.subtype())
+                    != (mime::TEXT, mime::EVENT_STREAM)
+                {
                     return Err(ErrorKind::InvalidContentType(content_type.clone()).into());
                 }
             } else {
@@ -105,10 +106,12 @@ impl Client {
 
 // Helper macro for Option<Result<...>>
 macro_rules! try_option {
-    ($e:expr) => (match $e {
-        Ok(val) => val,
-        Err(err) => return Some(Err(::std::convert::From::from(err))),
-    });
+    ($e:expr) => {
+        match $e {
+            Ok(val) => val,
+            Err(err) => return Some(Err(::std::convert::From::from(err))),
+        }
+    };
 }
 
 /// Iterate over the client to get events.
@@ -148,7 +151,7 @@ impl Iterator for Client {
                                     self.last_event_id = Some(id.clone());
                                 }
                                 return Some(Ok(event));
-                            },
+                            }
                             ParseResult::SetRetry(ref retry) => {
                                 self.retry = *retry;
                             }
@@ -156,12 +159,8 @@ impl Iterator for Client {
                         line.clear();
                     }
                     // Nothing read from stream
-                    Ok(_) => {
-                        break None
-                    }
-                    Err(err) => {
-                        break Some(Err(::std::convert::From::from(err)))
-                    }
+                    Ok(_) => break None,
+                    Err(err) => break Some(Err(::std::convert::From::from(err))),
                 }
             }
         };
@@ -173,8 +172,7 @@ impl Iterator for Client {
                 self.response = None;
                 self.next()
             }
-            _ => result
+            _ => result,
         }
     }
 }
-
