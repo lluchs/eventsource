@@ -48,12 +48,12 @@ fn run(listener: &TcpListener, rx: &Receiver<Message>) {
                     let mut actual = String::new();
                     t!(socket.read_line(&mut actual));
                     actual = actual.to_ascii_lowercase();
-                    if actual.starts_with("Content-Length") {
+                    if actual.starts_with("content-length") {
                         let len = actual.split(": ").skip(1).next().unwrap();
                         expected_len = len.trim().parse().ok();
                     }
                     // various versions of libcurl do different things here
-                    if actual == "Proxy-Connection: Keep-Alive\r\n" {
+                    if actual == "proxy-connection: keep-alive\r\n" {
                         continue;
                     }
                     if expected_headers.remove(&actual[..]) {
