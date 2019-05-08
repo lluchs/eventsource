@@ -55,6 +55,10 @@ fn run(listener: &TcpListener, rx: &Receiver<Message>) {
                     if actual == "Proxy-Connection: Keep-Alive\r\n" {
                         continue;
                     }
+                    // The User-Agent header changes with the reqwest version.
+                    if actual.starts_with("user-agent:") {
+                        continue;
+                    }
                     if expected_headers.remove(&actual[..]) {
                         continue;
                     }

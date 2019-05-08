@@ -14,7 +14,6 @@ fn server() -> Server {
         "\
          GET / HTTP/1.1\r\n\
          host: 127.0.0.1:$PORT\r\n\
-         user-agent: reqwest/0.9.4\r\n\
          accept: text/event-stream\r\n\
          accept-encoding: gzip\r\n\
          \r\n",
