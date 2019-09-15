@@ -1,6 +1,6 @@
 [package]
 name = "eventsource"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Lukas Werling <lukas.werling@gmail.com>"]
 
 description = "Library for accessing EventSource/Server-Sent Events endpoints"

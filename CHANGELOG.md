@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 - 2019-09-16
+### Changed
+ - Update reqwest to 0.9.x
+
 ## 0.3.0 - 2017-10-27
 ### Changed
  - Update reqwest to 0.8.0
