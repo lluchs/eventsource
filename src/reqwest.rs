@@ -55,8 +55,15 @@ impl Client {
     ///
     /// This does not start an HTTP request.
     pub fn new(url: reqw::Url) -> Client {
+        Self::new_with_client(url, reqw::Client::new())
+    }
+
+    /// Constructs a new EventSource client for the given URL and reqwest Client.
+    ///
+    /// This does not start an HTTP request.
+    pub fn new_with_client(url: reqw::Url, client: reqw::Client) -> Client {
         Client {
-            client: reqw::Client::new(),
+            client,
             response: None,
             url: url,
             last_event_id: None,
