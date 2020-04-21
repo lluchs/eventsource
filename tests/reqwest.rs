@@ -1,6 +1,3 @@
-extern crate eventsource;
-extern crate reqwest;
-
 use eventsource::reqwest::{Client, Error, ErrorKind};
 use reqwest::Url;
 use std::time::Duration;
@@ -15,7 +12,6 @@ fn server() -> Server {
          GET / HTTP/1.1\r\n\
          host: 127.0.0.1:$PORT\r\n\
          accept: text/event-stream\r\n\
-         accept-encoding: gzip\r\n\
          \r\n",
     );
     return s;

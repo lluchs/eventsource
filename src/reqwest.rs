@@ -1,17 +1,15 @@
 //! # Reqwest-based EventSource client
 
-use reqwest as reqw;
-
 mod errors {
     use error_chain::*;
     error_chain! {
         foreign_links {
-            Reqwest(super::reqw::Error);
+            Reqwest(reqwest::Error);
             Io(::std::io::Error);
         }
 
         errors {
-            Http(status: super::reqw::StatusCode) {
+            Http(status: reqwest::StatusCode) {
                 description("HTTP request failed")
                 display("HTTP status code: {}", status)
             }
@@ -28,7 +26,8 @@ mod errors {
 }
 pub use self::errors::*;
 
-use self::reqw::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
+use reqwest::blocking as reqw;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
 use super::event::{parse_event_line, Event, ParseResult};
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
@@ -41,7 +40,7 @@ const DEFAULT_RETRY: u64 = 5000;
 pub struct Client {
     client: reqw::Client,
     response: Option<BufReader<reqw::Response>>,
-    url: reqw::Url,
+    url: reqwest::Url,
     last_event_id: Option<String>,
     last_try: Option<Instant>,
 
@@ -54,14 +53,14 @@ impl Client {
     /// Constructs a new EventSource client for the given URL.
     ///
     /// This does not start an HTTP request.
-    pub fn new(url: reqw::Url) -> Client {
+    pub fn new(url: reqwest::Url) -> Client {
         Self::new_with_client(url, reqw::Client::new())
     }
 
     /// Constructs a new EventSource client for the given URL and reqwest Client.
     ///
     /// This does not start an HTTP request.
-    pub fn new_with_client(url: reqw::Url, client: reqw::Client) -> Client {
+    pub fn new_with_client(url: reqwest::Url, client: reqw::Client) -> Client {
         Client {
             client,
             response: None,
