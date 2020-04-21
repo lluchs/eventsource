@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 - 2020-04-21
+### Added
+ - `Client::new_with_client()` allows passing a custom reqwest client. ([#8](https://github.com/lluchs/eventsource/pull/8))
+
+### Changed
+ - Update reqwest to 0.10.x. We are still using the blocking API.
+
 ## 0.4.0 - 2019-09-16
 ### Changed
  - Update reqwest to 0.9.x
