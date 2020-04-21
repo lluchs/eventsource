@@ -48,7 +48,7 @@ pub enum ParseResult {
 /// // ...
 /// ```
 pub fn parse_event_line(line: &str, event: &mut Event) -> ParseResult {
-    let line = line.trim_right_matches(|c| c == '\r' || c == '\n');
+    let line = line.trim_end_matches(|c| c == '\r' || c == '\n');
     if line == "" {
         ParseResult::Dispatch
     } else {
@@ -106,13 +106,13 @@ impl Event {
 impl fmt::Display for Event {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(ref id) = self.id {
-            try!(write!(f, "id: {}\n", id));
+            write!(f, "id: {}\n", id)?;
         }
         if let Some(ref event_type) = self.event_type {
-            try!(write!(f, "event: {}\n", event_type));
+            write!(f, "event: {}\n", event_type)?;
         }
         for line in self.data.lines() {
-            try!(write!(f, "data: {}\n", line));
+            write!(f, "data: {}\n", line)?;
         }
         Ok(())
     }
