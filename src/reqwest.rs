@@ -1,9 +1,9 @@
 //! # Reqwest-based EventSource client
 
-extern crate mime;
-extern crate reqwest as reqw;
+use reqwest as reqw;
 
 mod errors {
+    use error_chain::*;
     error_chain! {
         foreign_links {
             Reqwest(super::reqw::Error);

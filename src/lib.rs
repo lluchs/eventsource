@@ -7,8 +7,6 @@
 //! # Examples
 //!
 //! ```no_run
-//! extern crate eventsource;
-//! extern crate reqwest;
 //! use eventsource::reqwest::Client;
 //! use reqwest::Url;
 //!
@@ -20,9 +18,6 @@
 //! }
 //! ```
 //!
-
-#[macro_use]
-extern crate error_chain;
 
 // Generic text/event-stream parsing and serialization.
 pub mod event;

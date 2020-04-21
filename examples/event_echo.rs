@@ -1,6 +1,3 @@
-extern crate eventsource;
-extern crate reqwest;
-
 use eventsource::reqwest::Client;
 use reqwest::Url;
 

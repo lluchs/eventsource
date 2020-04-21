@@ -9,8 +9,6 @@ reconnection and parsing of the `text/event-stream` data format.
 ## Examples
 
 ```rust
-extern crate eventsource;
-extern crate reqwest;
 use eventsource::reqwest::Client;
 use reqwest::Url;
                                                                                               
