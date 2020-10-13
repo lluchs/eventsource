@@ -1,34 +1,24 @@
 //! # Reqwest-based EventSource client
 
-mod errors {
-    use error_chain::*;
-    error_chain! {
-        foreign_links {
-            Reqwest(reqwest::Error);
-            Io(::std::io::Error);
-        }
-
-        errors {
-            Http(status: reqwest::StatusCode) {
-                description("HTTP request failed")
-                display("HTTP status code: {}", status)
-            }
-            InvalidContentType(mime_type: mime::Mime) {
-                description("unexpected Content-Type header")
-                display("unexpected Content-Type: {}", mime_type)
-            }
-            NoContentType {
-                description("no Content-Type header in response")
-                display("Content-Type missing")
-            }
-        }
-    }
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("{0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+    #[error("HTTP status code: {0}")]
+    Http(reqwest::StatusCode),
+    #[error("unexpected Content-Type: {0}")]
+    InvalidContentType(mime::Mime),
+    #[error("Content-Type missing")]
+    NoContentType,
 }
-pub use self::errors::*;
 
+pub type Result<T> = std::result::Result<T, Error>;
+
+use super::event::{parse_event_line, Event, ParseResult};
 use reqwest::blocking as reqw;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE};
-use super::event::{parse_event_line, Event, ParseResult};
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
 
@@ -84,7 +74,7 @@ impl Client {
         {
             let status = res.status();
             if !status.is_success() {
-                return Err(ErrorKind::Http(status.clone()).into());
+                return Err(Error::Http(status.clone()));
             }
 
             if let Some(content_type_hv) = res.headers().get(CONTENT_TYPE) {
@@ -98,10 +88,10 @@ impl Client {
                 if (content_type.type_(), content_type.subtype())
                     != (mime::TEXT, mime::EVENT_STREAM)
                 {
-                    return Err(ErrorKind::InvalidContentType(content_type.clone()).into());
+                    return Err(Error::InvalidContentType(content_type.clone()));
                 }
             } else {
-                return Err(ErrorKind::NoContentType.into());
+                return Err(Error::NoContentType);
             }
         }
 

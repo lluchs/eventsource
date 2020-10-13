@@ -1,4 +1,4 @@
-use eventsource::reqwest::{Client, Error, ErrorKind};
+use eventsource::reqwest::{Client, Error};
 use reqwest::Url;
 use std::time::Duration;
 
@@ -79,7 +79,7 @@ fn missing_content_type() {
 
     let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
     match client.next().unwrap() {
-        Err(Error(ErrorKind::NoContentType, _)) => assert!(true),
+        Err(Error::NoContentType) => assert!(true),
         _ => assert!(false, "NoContentType error expected"),
     }
 }
@@ -97,7 +97,7 @@ fn invalid_content_type() {
 
     let mut client = Client::new(Url::parse(&s.url("/")).unwrap());
     match client.next().unwrap() {
-        Err(Error(ErrorKind::InvalidContentType(_), _)) => assert!(true),
+        Err(Error::InvalidContentType(_)) => assert!(true),
         _ => assert!(false, "InvalidContentType error expected"),
     }
 }
